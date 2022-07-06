@@ -2,6 +2,41 @@ const db = require("../db")
 const { BadRequestError, NotFoundError } = require("../utils/errors")
 
 class Booking {
+  static async newBooking (newBooking,listing,user)  {
+    const requiredFields = ["startDate", "endDate"]
+    requiredFields.forEach((property) => {
+      if (!newBooking?.hasOwnProperty(property)) {
+        throw new BadRequestError(`Missing ${property} in request body.`)
+
+
+      }
+     const startDate = new Date(newBooking)
+     const booking = await db.query (
+      `INSERT INTO bookings (payment_method, start_date, end_date, guests, total_cost)
+      VALUES ((SELECT id FROM users WHERE username = $1, $2, $3, $4, $5, $6)
+      RETURNING id,
+                  start_date AS "startDate",
+                  end_date AS "endDate",
+                  guests,
+                  total_cost,
+                  user_id AS totalCost,
+                  username,
+                  price,
+                  -- include 10% marketplace fees
+                  CEIL(price + price * 1.1) AS "totalCost",
+                  created_at AS "createdAt", (
+                    SELECT users.username
+                    FROM users
+                    WHERE users.id = (
+                      SELECT listings.user_id
+                      FROM listings
+                      WHERE listings.id = listing_id
+                    )
+                  ) AS "hostUsername";`
+     )
+    })
+  }
+
   static async fetchBookingById(bookingId) {
     // fetch a single booking by its id
     const results = await db.query(
